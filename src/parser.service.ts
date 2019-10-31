@@ -15,7 +15,6 @@ class Parser {
         console.log("Start parsing file.");
 
         let data = fs.readFileSync(filePath, 'utf8');
-        let requiredParams = ['Package', 'Version', 'Depends', 'Description'];
         let packagesList = data.split('\n\n');
 
         packagesList = packagesList.filter(v => v.length > 0);
@@ -23,52 +22,10 @@ class Parser {
 
         packagesList.forEach((packageElement) => {
 
-            let tempPkgParams = packageElement.split('\n');
-            let pkgParamObj: any = {};
-
-            let procKey: string;
-
-            tempPkgParams.forEach((paramElm) => {
-
-                //Concating the extended details line for any required param splitted because of the seperator.
-                if (paramElm.startsWith(' ') && procKey) {
-                    pkgParamObj[procKey] = pkgParamObj[procKey] + paramElm;
-                } else {
-                    let paramArr = paramElm.split(':');
-                    let res = [];
-                    if (paramArr.length < 2) { // No key value present.
-                        return;
-                    } else {      // Get key value and if multi occurances of seperator, ignore after first .
-                        res = paramArr.slice(0, 1);
-                        res.push(paramArr.slice(1).join(':'));
-                        if (res.length == 2 && requiredParams.indexOf(paramArr[0]) >= 0) {
-                            pkgParamObj[res[0]] = res[1];    //Fetching the required key-value.
-                            procKey = res[0];
-                        } else {
-                            procKey = "";
-                        }
-                    }
-                }
-            })
-
-            let packageName = pkgParamObj['Package'];
-            packageName = packageName.trim()
-            let depends: string[] = [];
-            let dependsStr = pkgParamObj['Depends'];
-
-            if (dependsStr) {
-                depends = dependsStr.trim().split(/\s*,\s*/);
-            }
-
-            if (packageName) {
-                this.addDependencies(packageName, depends);
-                let pkgObj: ValueSetItem<any> = {
-                    key: packageName,
-                    val: new Package(packageName, pkgParamObj['Description'],
-                        pkgParamObj['Version'], depends)
-                };
-                packagesRes.push(pkgObj);
-            }
+            let pkgParamObj = this.processPackageParams(packageElement);
+            let pkgObj = this.createResElm(pkgParamObj);
+            packagesRes.push(pkgObj);
+            
         })
 
         packagesRes.forEach((pkg) => {
@@ -77,6 +34,59 @@ class Parser {
         })
 
         return packagesRes;
+    }
+
+    processPackageParams(packageElement: string) {
+
+        let requiredParams = ['Package', 'Version', 'Depends', 'Description'];
+        let tempPkgParams = packageElement.split('\n');
+        let pkgParamObj: { [x: string]: string; } = {};
+
+        let procKey: string;
+
+        tempPkgParams.forEach((paramElm) => {
+
+            //Concating the extended details line for any required param splitted because of the seperator.
+            if (paramElm.startsWith(' ') && procKey) {
+                pkgParamObj[procKey] = pkgParamObj[procKey] + paramElm;
+            } else {
+                let paramArr = paramElm.split(':');
+                let res = [];
+                if (paramArr.length < 2) { // No key value present.
+                    return;
+                } else {      // Get key value and if multi occurances of seperator, ignore after first .
+                    res = paramArr.slice(0, 1);
+                    res.push(paramArr.slice(1).join(':'));
+                    if (res.length == 2 && requiredParams.indexOf(paramArr[0]) >= 0) {
+                        pkgParamObj[res[0]] = res[1];    //Fetching the required key-value.
+                        procKey = res[0];
+                    } else {
+                        procKey = "";
+                    }
+                }
+            }
+        })
+        return pkgParamObj;
+    }
+
+    createResElm(pkgParamObj: { [x: string]: string; }) {
+
+        let packageName = pkgParamObj['Package'] || "";
+        packageName = packageName.trim();
+        let depends: string[] = [];
+        let dependsStr = pkgParamObj['Depends'];
+
+        depends = dependsStr ? dependsStr.trim().split(/\s*,\s*/):[];
+        
+        if (packageName) {
+            this.addDependencies(packageName, depends);
+            let pkgObj: ValueSetItem<any> = {
+                key: packageName,
+                val: new Package(packageName, pkgParamObj['Description'],
+                    pkgParamObj['Version'], depends)
+            };
+            return pkgObj;
+        }
     }
 
     addDependencies(packageName: string, depends: string[]) {
