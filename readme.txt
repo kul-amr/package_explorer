@@ -1,3 +1,5 @@
+On Ubuntu system, a file called /var/lib/dpkg/status holds information about software packages that the system knows about. This code exposes some key information about currently installed packages via a REST API
+
 To excute the code, need to run the below command : 
 
     npm run dev
@@ -11,7 +13,7 @@ Main API endpoint:
     - Lists all the installed packages ordered alphabetically.
     - Displays 10 records on every page.
     - Gives href for each package to check more details.
-    - Gives links to navigate to first, next and previous page.
+    - Gives links to navigate to the first, next and previous page.
 
     http://localhost:8080/api/packages/:packagename
 
